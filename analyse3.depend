@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1440919699 source:/home/ban/Desktop/analyse3/main.c
+	<stdio.h>
+	<stdlib.h>
+
