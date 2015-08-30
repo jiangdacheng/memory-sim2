@@ -29,31 +29,32 @@ unsigned long hash(unsigned long x) //from page start address to hashed page num
 
 int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct area areas[], int areas_number, unsigned long *i, unsigned long *j)
 {
-//    static int i,j;
-    *scaned = 0;
-    *saved = 0;
-    (*j)++;
-    while (1) {
-        for (; (*i) < areas_number; (*i)++) {
-            if (*j < areas[*i].begin_addr)      //if the j round just begin
-                *j = areas[*i].begin_addr;
-            for (; *j < (areas[*i].end_addr); (*j)+=4096) {
-                //printf("%d", *j);
-                if ((*scaned) >= scan_max) return 1;
-                if ((*saved) >= save_max) return 1;
-                (*scaned)++;
 
-                if (pages[hash(*j)].dirty) {
-                    pages[hash(*j)].dirty = 0;
-                    (*saved)++;
-                    global_dirty--;
-                }
-
-            }
-            *j = 0;     //clean for next j round
-        }
-        *i = 0;     // clean for next i round
-    }
+//    *scaned = 0;
+//    *saved = 0;
+//    (*j)++;
+//    while (1) {
+//        for (; (*i) < areas_number; (*i)++) {
+//            if (*j < areas[*i].begin_addr)      //if the j round just begin
+//                *j = areas[*i].begin_addr;
+//            for (; *j < (areas[*i].end_addr); (*j)+=4096) {
+//                //printf("%d", *j);
+//                if ((*scaned) >= scan_max) return 1;
+//                if ((*saved) >= save_max) return 1;
+//                (*scaned)++;
+//
+//                if (pages[hash(*j)].dirty) {
+//                    pages[hash(*j)].dirty = 0;
+//                    (*saved)++;
+//                    global_dirty--;
+//                }
+//
+//            }
+//            *j = 0;     //clean for next j round
+//        }
+//        *i = 0;     // clean for next i round
+//    }
+    return 1;
 }
 
 //int save(int *scaned, int *saved, int scan_max, int save_max, struct area areas[], int areas_number, int *i, int *j)
