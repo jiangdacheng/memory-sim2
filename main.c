@@ -33,12 +33,16 @@ unsigned long hash(unsigned long x) //from page start address to hashed page num
 int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct area areas[], int areas_number, unsigned long *i, unsigned long *j, double time_now, double time_last)
 {
     static double threshold;
+    double orig_threshold;
+
+
 
     if (threshold < (time_now - time_last))
         threshold = time_now - time_last;
-    printf("%lf\n", threshold);
-    *scaned = 0;
-    *saved = 0;
+    orig_threshold = threshold;
+//    printf("%lf\n", threshold);
+    *scaned = 1;
+    *saved = 1;
     (*j)++;
     while (1) {
         for (; (*i) < areas_number; (*i)++) {
@@ -48,12 +52,14 @@ int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct are
                 //printf("%d", *j);
                 if (((*scaned) >= scan_max) || ((*saved) >= save_max)) {    //exit and adjust threshold
                     //assume the apprixmate interval is even distribute.
-                    printf("%lf\n", ((double)(*saved)));
-                    threshold = threshold * ((double)(*saved) * scan_max / save_max / (*scaned));
-                    printf("%lf\n", threshold);
+                    printf("%ld\n", ((*saved)));
+//                    threshold = threshold * ((double)(*saved) * scan_max / save_max / (*scaned)) / 2;
+                //    printf("%lf\n", threshold);
 
                     return 1;
                 }
+
+                threshold = orig_threshold * ((double)(*saved) * scan_max / save_max / (*scaned)) / 2;
 
                 (*scaned)++;
 
@@ -188,6 +194,9 @@ int main(int argc, char *argv[])        //pmap file, log file, time interval (fr
     time_interval = atof(argv[3]);
     scan_max = atof(argv[4]);
     save_max = atof(argv[5]);
+
+    save_max++;
+    scan_max++;
 
     printf("!!");
     if (fp == NULL) printf("@@@");
