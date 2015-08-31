@@ -39,8 +39,8 @@ int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct are
                 *j = areas[*i].begin_addr;
             for (; *j < (areas[*i].end_addr); (*j)+=4096) {
                 //printf("%d", *j);
-                if ((*scaned) >= scan_max) return 1;
-                if ((*saved) >= save_max) return 1;
+                if ((*scaned) >= scan_max) {printf("saved:%d\n", *saved); return 1;}
+                if ((*saved) >= save_max) {printf("scaned:%d\n", *scaned); return 1;}
                 (*scaned)++;
 
                 if (pages[hash(*j)].dirty) {
