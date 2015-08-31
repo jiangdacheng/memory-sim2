@@ -10,6 +10,9 @@ struct area {
 struct page {
     char dirty;
     long addr;
+    double dirty_time;     //
+//    double last_scan_time;
+    char actual_dirty;          //
 };
 
 struct page pages[16777216] = {{0, 0} };
@@ -27,9 +30,13 @@ unsigned long hash(unsigned long x) //from page start address to hashed page num
     return xx;
 }
 
-int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct area areas[], int areas_number, unsigned long *i, unsigned long *j)
+int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct area areas[], int areas_number, unsigned long *i, unsigned long *j, double time_now, double time_last)
 {
-//    static int i,j;
+    static double threshold;
+
+    if (threshold < (time_now - time_last))
+        threshold = time_now - time_last;
+    printf("%lf\n", threshold);
     *scaned = 0;
     *saved = 0;
     (*j)++;
@@ -39,12 +46,25 @@ int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct are
                 *j = areas[*i].begin_addr;
             for (; *j < (areas[*i].end_addr); (*j)+=4096) {
                 //printf("%d", *j);
-                if ((*scaned) >= scan_max) return 1;
-                if ((*saved) >= save_max) return 1;
+                if (((*scaned) >= scan_max) || ((*saved) >= save_max)) {    //exit and adjust threshold
+                    //assume the apprixmate interval is even distribute.
+                    printf("%lf\n", ((double)(*saved)));
+                    threshold = threshold * ((double)(*saved) * scan_max / save_max / (*scaned));
+                    printf("%lf\n", threshold);
+
+                    return 1;
+                }
+
                 (*scaned)++;
 
                 if (pages[hash(*j)].dirty) {
+                    pages[hash(*j)].actual_dirty = 1;
                     pages[hash(*j)].dirty = 0;
+                    pages[hash(*j)].dirty_time = time_last;
+                }
+                if (pages[hash(*j)].actual_dirty && ((time_now - pages[hash(*j)].dirty_time) >= threshold))
+                {
+                    pages[hash(*j)].actual_dirty = 0;
                     (*saved)++;
                     global_dirty--;
                 }
@@ -56,17 +76,9 @@ int find_victims(int *scaned, int *saved, int scan_max, int save_max, struct are
     }
 }
 
-//int save(int *scaned, int *saved, int scan_max, int save_max, struct area areas[], int areas_number, int *i, int *j)
-//{
-//
-//    for ((*saved)=0; (*saved)<(save_max); (*saved)++) {
-//    find_victim(areas, areas_number, i, j);
-//
-//    }
-//
-//}
 
-int time_tick(FILE *fp, double time_intetval)    //make dirty. If return 0, the input ends.
+
+int time_tick(FILE *fp, double time_intetval, double *time_now)    //make dirty. If return 0, the input ends.
 {
     static double time;
     static unsigned long addr;
@@ -79,13 +91,17 @@ int time_tick(FILE *fp, double time_intetval)    //make dirty. If return 0, the 
 //        printf("%lf %lX\n", time, addr);
 
         endtime = time + time_intetval;
+
+        (*time_now) = endtime;
 //        printf("%lf %lX\n", endtime, addr);
         pages[hash(addr)].dirty = 1;
     } else {                // not the first time
         endtime = time + time_intetval;
+        (*time_now) = endtime;
         if (!(pages[hash(addr)].dirty)) {
             pages[hash(addr)].dirty = 1;
-            global_dirty++;
+            if (!(pages[hash(addr)].actual_dirty))
+                global_dirty++;
         }
     }
     while (fscanf(fp, "%lf %lX\n", &time, &addr) == 2) {
@@ -96,13 +112,14 @@ int time_tick(FILE *fp, double time_intetval)    //make dirty. If return 0, the 
         if (time > endtime) return 1;
         if (pages[hash(addr)].dirty) continue;
         pages[hash(addr)].dirty = 1;
+        if (pages[hash(addr)].actual_dirty) continue;
         global_dirty++;
     }
 //    if (fscanf(fp, "%lf %lX\n", &time, &addr) != 2) return 0;
     return 0;
 }
 
-int init(char *filename, struct area areas[], int *areas_number)
+int init(char *filename, struct area areas[], int *areas_number)    //read area info
 {
 //    *areas_number = 2;
 //    areas[0].end_addr =
@@ -143,13 +160,14 @@ int init(char *filename, struct area areas[], int *areas_number)
 }
 
 
-int main(int argc, char *argv[])        //pmap file, log file, time interval, scan max, save max.
+int main(int argc, char *argv[])        //pmap file, log file, time interval (frame length), scan max, save max.
 {
     struct area areas[10000];
     int areas_number;
     unsigned long i,j;
     int scaned, saved;
     double time_interval;
+    double time_now, time_last;
     int scan_max, save_max;
     FILE *fp, *fout;
 
@@ -175,8 +193,10 @@ int main(int argc, char *argv[])        //pmap file, log file, time interval, sc
     if (fp == NULL) printf("@@@");
 //    fscanf(fp, "%lf %lX\n", &time, &addr);
 
-    while (time_tick(fp, time_interval)) {      //make dirty
-        find_victims(&scaned, &saved, scan_max, save_max, areas, areas_number, &i, &j);     //backup
+    while (time_tick(fp, time_interval, &time_now)) {      //make dirty
+
+        find_victims(&scaned, &saved, scan_max, save_max, areas, areas_number, &i, &j, time_now, time_last);     //backup
+        time_last = time_now;
         fprintf(fout, "%d\n", global_dirty);
     }
 
